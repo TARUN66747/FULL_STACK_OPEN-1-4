@@ -6,6 +6,16 @@ app.get('/',(request,response)=>{
         response.json(blogs)
     })
 })
+app.get('/:id',(request,response)=>{
+    const id = request.params.id
+    Blog.findById(id).then(blog => {
+        if(blog){
+            response.json(blog)
+        }else{
+            response.status(404).end()
+        }
+    })
+})
 
 app.post('/',(request,response)=>{
     const blog = new Blog(request.body)
