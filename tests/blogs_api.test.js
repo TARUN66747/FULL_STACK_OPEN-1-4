@@ -66,6 +66,18 @@ test('blogs post feature check', async ()=>{
   assert(titles.includes('third blog'))
 })
 
+test('blog without likes default to 0 likes',async ()=>{
+  const newBlog ={
+    title: 'third blog',
+    author: 'hiraChand',
+    url: 'http://example.com/3',
+    
+  }
+
+  const response = await api.post('/api/blogs').send(newBlog).expect(201).expect('Content-Type', /application\/json/)
+
+  assert.strictEqual(response.body.likes,0)
+})
 
 after(async () =>{
     await mongoose.connection.close()
