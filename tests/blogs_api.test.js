@@ -5,6 +5,7 @@ const app = require('../app')
 const assert  = require('node:assert')
 const Blog = require('../models/blog')
 const helper = require('./test_helper')
+const { log } = require('node:console')
 
 const api = supertest(app)
 const initialBlogs = [
@@ -85,7 +86,10 @@ test('blog with missing title or url', async () =>{
     author: 'hiraChand',
     likes:5
   }
-    api.post('/api/blogs').send(newBlog).expect(400)
+    await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(400)
   
  const response = await api.get('/api/blogs')
   assert.strictEqual(response.body.length, initialBlogs.length)
@@ -102,9 +106,33 @@ describe('deletion of blog',() =>{
   
     const blogsAtEnd = await helper.blogsInDb()
 
-    assert(blogsAtEnd.length,blogsAtStart-1)
+    assert(blogsAtEnd.length,blogsAtStart.length-1)
 
   })
+})
+
+describe('update of a blog', ()=>{
+  test('testing the likes update',async ()=>{
+    const blogsAtStart = await helper.blogsInDb()
+  const blogToUpdate = blogsAtStart[0]
+
+  const updatedData = {
+  likes: 82
+}
+   await api
+   .put(`/api/blogs/${blogToUpdate.id}`)
+   .send(updatedData)
+   .expect(200)
+
+
+   const respondedData = await Blog.findById(blogToUpdate.id)
+
+   console.log(respondedData)
+
+   assert.strictEqual(respondedData.likes,updatedData.likes)
+  })
+
+  
 })
 after(async () =>{
     await mongoose.connection.close()
