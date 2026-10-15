@@ -2,6 +2,8 @@ const {MONGODB_URI,PORT} = require('./utils/config')
 const express = require('express')
 const mongoose = require('mongoose')
 const blogRouter = require('./controllers/blogs')
+const usersRouter = require('./controllers/users')
+
 
 
 const app = express()
@@ -18,11 +20,19 @@ app.use(express.json())
 
 app.use('/api/blogs',blogRouter)
 
-const errorHandler = (error , request ,response,next) =>{
-    if (error.name === 'ValidationError'){
-        return response.status(400).json({error : error.message})
-    }
-    next(error)
+app.use('/api/users',usersRouter)
+
+const errorHandler = (error, request, response, next) => {
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
+
+  } else if (error.name === 'MongoServerError' && error.message.includes('E11000 duplicate key error')) {
+    return response.status(400).json({ error: 'expected `username` to be unique' })
+  }
+
+  next(error)
 }
 app.use(errorHandler)
 
