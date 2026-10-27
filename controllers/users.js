@@ -18,6 +18,12 @@ usersRouter.post('/',async(request,response)=>{
     if(!password || password.length < 3){
       return response.status(400).json({error:'password length should be greater than 3 or atleast 3 characters long' })
     }
+
+    const existingUser = await User.findOne({ username })
+    if (existingUser) {
+      return response.status(400).json({ error: 'expected `username` to be unique' })
+    }
+
     const saltRounds = 10
     const passwordHash =await bycrpt.hash(password,saltRounds)
 
@@ -25,9 +31,10 @@ usersRouter.post('/',async(request,response)=>{
         username,
         name,
         passwordHash
+        
     })
     const savedUser = await user.save()
-
+    
     response.status(201).json(savedUser)
 
 })

@@ -1,15 +1,16 @@
 const app = require('express').Router()
 const Blog = require('../models/blog')
+const User = require('../models/user')
 
 
 app.get('/',(request,response)=>{
-    Blog.find({}).then(blogs =>{
+    Blog.find({}).populate('user').then(blogs =>{
         response.json(blogs)
     })
 })
 app.get('/:id',(request,response)=>{
     const id = request.params.id
-    Blog.findById(id).then(blog => {
+    Blog.findById(id).populate('user').then(blog => {
         if(blog){
             response.json(blog)
         }else{
@@ -18,13 +19,35 @@ app.get('/:id',(request,response)=>{
     })
 })
 
-app.post('/',(request,response,next)=>{
-    const blog = new Blog(request.body)
-    blog.save().then(result =>{
-        response.status(201).json(result)
-    })
-    .catch(error => next(error))
+app.post('/', async (request, response, next) => {
+    const body = request.body
+
+    try {
+        const user = await User.findOne({})
+        if (!user) {
+            return response.status(400).json({ error: 'no user found to assign blog to' })
+        }
+
+        const blog = new Blog({
+            title: body.title,
+            author: body.author,
+            url: body.url,
+            likes: body.likes || 0,
+            user: user._id 
+        })
+
+        const savedBlog = await blog.save()
+
+        // Don't forget to push the saved blog ID to the user's blogs array!
+        user.blogs = user.blogs.concat(savedBlog._id)
+        await user.save()
+
+        response.status(201).json(savedBlog)
+    } catch (error) {
+        next(error)
+    }
 })
+
 
 app.delete('/:id',async (request,response)=>{
     const id = request.params.id

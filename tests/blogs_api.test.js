@@ -5,10 +5,8 @@ const app = require('../app')
 const assert  = require('node:assert')
 const Blog = require('../models/blog')
 const helper = require('./test_helper')
-const { log } = require('node:console')
 const bcrypt = require('bcrypt')
 const User = require('../models/user')
-const { request } = require('node:http')
 
 const api = supertest(app)
 const initialBlogs = [
@@ -28,10 +26,21 @@ const initialBlogs = [
 ]
 beforeEach(async ()=>{
     await Blog.deleteMany({})
-    let blogObject = new Blog(initialBlogs[0])
-    await blogObject.save()
-    blogObject = new Blog(initialBlogs[1])
-    await blogObject.save()
+
+    await User.deleteMany({})
+    const passwordHash = await bcrypt.hash('sekret', 10)
+    const user = new User({ username: 'root', passwordHash })
+    const savedUser = await user.save()  
+
+    let blogObject = new Blog({ ...initialBlogs[0], user: savedUser._id })
+    const savedObj1 =  await blogObject.save() 
+    savedUser.blogs = savedUser.blogs.concat(savedObj1._id)
+  
+    blogObject = new Blog({ ...initialBlogs[1], user: savedUser._id })
+    const savedObj2 = await blogObject.save()   
+    savedUser.blogs = savedUser.blogs.concat(savedObj2._id) 
+
+    await savedUser.save()
 })
 
 test('blogs to be loaded', async ()=>{
@@ -139,22 +148,17 @@ describe('update of a blog', ()=>{
 })
 
 describe('when there is initially one user in db', () => {
-  beforeEach(async () => {
-    await User.deleteMany({})
-
-    const passwordHash = await bcrypt.hash('sekret', 10)
-    const user = new User({ username: 'root', passwordHash })
-
-    await user.save()
-  })
+  
 
   test('creation succeeds with a fresh username', async () => {
     const usersAtStart = await helper.usersInDb()
+    
 
     const newUser = {
       username: 'mluukkai',
       name: 'Matti Luukkainen',
       password: 'salainen',
+      
     }
 
     await api
