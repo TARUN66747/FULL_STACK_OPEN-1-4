@@ -8,6 +8,7 @@ const helper = require('./test_helper')
 const { log } = require('node:console')
 const bcrypt = require('bcrypt')
 const User = require('../models/user')
+const { request } = require('node:http')
 
 const api = supertest(app)
 const initialBlogs = [
@@ -189,7 +190,44 @@ describe('when there is initially one user in db', () => {
 
     assert.strictEqual(usersAtEnd.length, usersAtStart.length)
   })
+  test('creation fails with proper statuscode and message if password is too short', async ()=>{
+  const userAtStart = await helper.usersInDb()
+  const newUser = {
+    username: 'testuser',
+    name: 'Test User',
+    password: 'ab'
+  }
+
+  const result = await api
+  .post('/api/users')
+  .send(newUser)
+  .expect(400)
+  .expect('Content-Type', /application\/json/)
+ assert(result.body.error.includes('password length should be greater than 3 or atleast 3 characters long'))
+ const usersAtEnd = await helper.usersInDb()
+  assert.strictEqual(usersAtEnd.length, userAtStart.length)
 })
+test('creation fails with proper statuscode and message ', async ()=>{
+  const userAtStart = await helper.usersInDb()
+  const newUser = {
+      username: 'te', 
+      name: 'Test User',
+      password: 'validpassword'
+    }
+    const result = await api.post('/api/users')
+    .send(newUser)
+    .expect(400)
+    .expect('Content-Type', /application\/json/)
+
+    assert(result.body.error.includes('username must be at least 3 characters long'))
+    const userAtEnd = await helper.usersInDb()
+    assert.strictEqual(userAtStart.length,userAtEnd.length)
+
+
+})
+})
+
+
 after(async () =>{
     await mongoose.connection.close()
 })
