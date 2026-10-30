@@ -19,11 +19,9 @@ mongoose.connect(MONGODB_URI,{family:4})
 })
 
 app.use(express.json())
-
+app.use(TokenExtractor)
 app.use('/api/blogs',blogRouter)
-
 app.use('/api/users',usersRouter)
-app.use('/api/login',TokenExtractor)
 app.use('/api/login',loginRouter)
 
 

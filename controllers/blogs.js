@@ -3,13 +3,6 @@ const Blog = require('../models/blog')
 const User = require('../models/user')
 const jwt = require('jsonwebtoken')
 
-const getTokenFrom = request => {
-    const authorization = request.get('authorization')
-    if(authorization && authorization.startsWith('Bearer')){
-        return authorization.replace('Bearer ','')
-    }
-    return null
-}
  
 app.get('/',(request,response)=>{
     Blog.find({}).populate('user').then(blogs =>{
@@ -63,10 +56,42 @@ app.post('/', async (request, response, next) => {
 })
 
 
-app.delete('/:id',async (request,response)=>{
+app.delete('/:id',async (request,response,next)=>{
     const id = request.params.id
-    await Blog.findByIdAndDelete(id)
-    response.status(204).end()
+    const body = request.body
+
+    try {
+         const decodedToken = jwt.verify(request.token,process.env.SECRET)
+         if(!decodedToken.id){
+            return response.status(401).json({error : 'token invalid'})
+    }
+
+    const blog = await Blog.findById(id)
+    if(!blog){
+        return response.status(404).json({ error: 'blog not found' })
+    }
+
+    if(blog.user.toString() !== decodedToken.id.toString()){
+        return response.status(401).json({error: 'only the creater can delete this blog'})
+    }
+
+
+        const user = await User.findById(decodedToken.id)
+        if (user) {
+           user.blogs = user.blogs.filter(b => b.toString() !== request.params.id)
+            await user.save()
+        }
+
+        await Blog.findByIdAndDelete(id)
+       
+         
+        
+         response.status(204).end()
+    }
+    catch (error) {
+        next(error)
+    }
+   
 })
 
 app.put('/:id', async (request,response)=>{
