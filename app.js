@@ -4,7 +4,7 @@ const mongoose = require('mongoose')
 const blogRouter = require('./controllers/blogs')
 const usersRouter = require('./controllers/users')
 const loginRouter = require('./controllers/login')
-const {TokenExtractor} = require('./utils/middleware')
+const {TokenExtractor,userExtractor} = require('./utils/middleware')
 
 
 
@@ -20,7 +20,8 @@ mongoose.connect(MONGODB_URI,{family:4})
 
 app.use(express.json())
 app.use(TokenExtractor)
-app.use('/api/blogs',blogRouter)
+
+app.use('/api/blogs',userExtractor,blogRouter)
 app.use('/api/users',usersRouter)
 app.use('/api/login',loginRouter)
 
