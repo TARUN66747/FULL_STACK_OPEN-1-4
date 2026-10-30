@@ -1,8 +1,16 @@
 const app = require('express').Router()
 const Blog = require('../models/blog')
 const User = require('../models/user')
+const jwt = require('jsonwebtoken')
 
-
+const getTokenFrom = request => {
+    const authorization = request.get('authorization')
+    if(authorization && authorization.startsWith('Bearer')){
+        return authorization.replace('Bearer ','')
+    }
+    return null
+}
+ 
 app.get('/',(request,response)=>{
     Blog.find({}).populate('user').then(blogs =>{
         response.json(blogs)
@@ -21,9 +29,15 @@ app.get('/:id',(request,response)=>{
 
 app.post('/', async (request, response, next) => {
     const body = request.body
-
+   
     try {
-        const user = await User.findOne({})
+         const decodedToken = jwt.verify(getTokenFrom(request),process.env.SECRET)
+    if(!decodedToken.id){
+        return response.status(401).json({error : 'token invalid'})
+    }
+
+
+        const user = await User.findById(decodedToken.id)
         if (!user) {
             return response.status(400).json({ error: 'no user found to assign blog to' })
         }
@@ -38,7 +52,7 @@ app.post('/', async (request, response, next) => {
 
         const savedBlog = await blog.save()
 
-        // Don't forget to push the saved blog ID to the user's blogs array!
+      
         user.blogs = user.blogs.concat(savedBlog._id)
         await user.save()
 
