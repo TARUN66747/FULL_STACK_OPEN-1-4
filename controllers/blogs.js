@@ -25,8 +25,8 @@ app.post('/', async (request, response, next) => {
          
         const user =  request.user
         if (!user) {
-            return response.status(400).json({ error: 'no user found to assign blog to' })
-        }
+    return response.status(401).json({ error: 'token missing or invalid' })
+}
 
         const blog = new Blog({
             title: body.title,

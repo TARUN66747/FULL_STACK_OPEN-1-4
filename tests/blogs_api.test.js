@@ -44,8 +44,12 @@ beforeEach(async ()=>{
 })
 
 test('blogs to be loaded', async ()=>{
+   const loginResponse = await api
+   .post('/api/login')
+   .send({ username: 'root', password: 'sekret' })
      await api
      .get('/api/blogs')
+     .set('authorization',`Bearer ${loginResponse.body.token}`)
      .expect(200)
      .expect('Content-Type', /application\/json/)
 })
@@ -58,6 +62,12 @@ test('blogs have an id property instead fo _id',async ()=>{
   assert.notStrictEqual(firstBlog.id, undefined)
 })
 test('blogs post feature check', async ()=>{
+  const loginResponse = await api
+  .post('/api/login')
+ .send({ username: 'root', password: 'sekret' })
+
+ const token = loginResponse.body.token
+
     const obj = {
     title: 'third blog',
     author: 'hiraChand',
@@ -68,6 +78,7 @@ test('blogs post feature check', async ()=>{
   await api
   .post('/api/blogs')
   .send(obj)
+  .set('Authorization',`Bearer ${token}`)
   .expect(201)
   .expect('Content-Type', /application\/json/)
     
@@ -81,6 +92,10 @@ test('blogs post feature check', async ()=>{
 })
 
 test('blog without likes default to 0 likes',async ()=>{
+   const loginResponse = await api
+   .post('/api/login')
+   .send({ username: 'root', password: 'sekret' })
+   
   const newBlog ={
     title: 'third blog',
     author: 'hiraChand',
@@ -88,11 +103,20 @@ test('blog without likes default to 0 likes',async ()=>{
     
   }
 
-  const response = await api.post('/api/blogs').send(newBlog).expect(201).expect('Content-Type', /application\/json/)
+  const response =  await api
+  .post('/api/blogs')
+  .send(newBlog).
+  set('Authorization',`Bearer ${loginResponse.body.token}`)
+  .expect(201)
+  .expect('Content-Type', /application\/json/)
 
   assert.strictEqual(response.body.likes,0)
 })
 test('blog with missing title or url', async () =>{
+  const loginResponse = await api
+    .post('/api/login')
+    .send({ username: 'root', password: 'sekret' })
+
    const newBlog ={
     title: 'fourth blog',
     author: 'hiraChand',
@@ -100,6 +124,7 @@ test('blog with missing title or url', async () =>{
   }
     await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${loginResponse.body.token}`)
     .send(newBlog)
     .expect(400)
   
@@ -107,18 +132,37 @@ test('blog with missing title or url', async () =>{
   assert.strictEqual(response.body.length, initialBlogs.length)
   
 })
+test('fails with status code 401 if a token is not provided', async () => {
+  const newBlog = {
+    title: 'unauthorized blog',
+    author: 'hiraChand',
+    url: 'http://example.com/unauth'
+  }
+
+  await api
+    .post('/api/blogs')
+    .send(newBlog)
+    .expect(401)
+    
+  const response = await api.get('/api/blogs')
+  assert.strictEqual(response.body.length, initialBlogs.length)
+})
 describe('deletion of blog',() =>{
   test('succeds with status code 204 if it is valid id', async ()=>{
     const blogsAtStart = await helper.blogsInDb()
+    const loginResponse = await api
+    .post('/api/login')
+    .send({ username: 'root', password: 'sekret' })
     const blogToDelete = blogsAtStart[0]
 
     await api
     .delete(`/api/blogs/${blogToDelete.id}`)
+    .set('authorization',`Bearer ${loginResponse.body.token}`)
     .expect(204)
   
     const blogsAtEnd = await helper.blogsInDb()
 
-    assert(blogsAtEnd.length,blogsAtStart.length-1)
+    assert.strictEqual(blogsAtEnd.length,blogsAtStart.length-1)
 
   })
 })
